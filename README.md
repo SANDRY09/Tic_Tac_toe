@@ -1,72 +1,109 @@
-from tkinter import *
-from tkinter import ttk
-import tkinter.messagebox
+import tkinter as tk
+from tkinter import messagebox
 
-# # Inisialisasi papan permainan (diwakili oleh list)
-board = [" " for _ in range(10)] #10 ruang kosong
+# --- Konfigurasi Awal Game ---
 
-def display_board():
-    """Fungsi untuk menampilkan papan permainan saat ini."""
-    print("\n")
-    print(" " + board[2] + " | " + board[0] + " | " + board[7] + " ")
-    print("---+---+---")
-    print(" " + board[5] + " | " + board[1] + " | " + board[6] + " ")
-    print("---+---+---")
-    print(" " + board[3] + " | " + board[4] + " | " + board[8] + " ")
-    print("\n")
+# List untuk melacak status papan permainan (9 kotak)
+board = [" " for _ in range(9)]
+# Menentukan pemain pertama
+current_player = "X"
+# Status permainan sedang berjalan
+game_running = True
+# List untuk menyimpan referensi objek tombol Tkinter
+buttons = []
 
-def check_win():
-    """Fungsi untuk memeriksa apakah ada pemenang."""
-    # Kondisi menang (baris, kolom, diagonal)
+def handle_click(index):
+    """Menangani klik tombol di papan permainan."""
+    global current_player, game_running
+    
+    # Memeriksa apakah kotak kosong dan permainan masih berjalan
+    if board[index] == " " and game_running:
+        board[index] = current_player
+        # Memperbarui teks tombol yang diklik dan menonaktifkannya
+        buttons[index].config(text=current_player, state="disabled", disabledforeground="black")
+        
+        # Memeriksa apakah ada pemenang setelah giliran ini
+        if check_win(current_player):
+            winner = current_player
+            game_running = False
+            messagebox.showinfo("Tic Tac Toe", f"Pemain {winner} MENANG!")
+            disable_all_buttons()
+        # Memeriksa apakah permainan seri
+        elif check_draw():
+            game_running = False
+            messagebox.showinfo("Tic Tac Toe", "Permainan SERI!")
+            disable_all_buttons()
+        # Jika belum menang atau seri, ganti giliran pemain
+        else:
+            current_player = "O" if current_player == "X" else "X"
+            status_label.config(text=f"Giliran Pemain: {current_player}")
+
+def check_win(player):
+    """Memeriksa semua kondisi menang (baris, kolom, diagonal)."""
     win_conditions = [
-        (0, 1, 2), (3, 4, 5), (6, 7, 8), # Diagonal
-        (0, 3, 6), (1, 4, 7), (2, 5, 8), # Baris
-        (0, 4, 8), (2, 4, 6)             # Kolom
+        (0, 1, 2), (3, 4, 5), (6, 7, 8), # Baris
+        (0, 3, 6), (1, 4, 7), (2, 5, 8), # Kolom
+        (0, 4, 8), (2, 4, 6)             # Diagonal
     ]
     for condition in win_conditions:
-        if board[condition[1]] == board[condition[1]] == board[condition[2]] != " ":
+        if all(board[i] == player for i in condition):
             return True
     return False
 
 def check_draw():
-    """Fungsi untuk memeriksa apakah permainan seri."""
+    """Memeriksa apakah permainan seri (semua kotak terisi)."""
+    # Jika tidak ada lagi spasi kosong (" ") di papan, maka seri
     return " " not in board
 
-def play_game():
-    """Fungsi utama untuk menjalankan permainan."""
+def reset_game():
+    """Mereset ulang permainan ke kondisi awal."""
+    global board, current_player, game_running
+    board = [" " for _ in range(9)]
     current_player = "X"
     game_running = True
+    status_label.config(text=f"Giliran Pemain: {current_player}")
+    # Mengaktifkan kembali semua tombol dan menghapus teksnya
+    for button in buttons:
+        button.config(text=" ", state="normal")
 
-    while game_running:
-        display_board()
-        # Meminta input pemain
-        try:
-            move = int(input(f"Pemain {current_player}, masukkan posisi (1-10): ")) - 1
-            if move < 0 or move > 9:
-                print("Posisi di luar jangkauan (1-10). Coba lagi.")
-                continue
-            if board[move] == " ":
-                board[move] = current_player
-            else:
-                print("Posisi tersebut sudah terisi. Coba lagi.")
-                continue
-        except ValueError:
-            print("Input tidak valid. Masukkan angka 1-10.")
-            continue
+def disable_all_buttons():
+    """Menonaktifkan semua tombol setelah permainan selesai (menang/seri)."""
+    for button in buttons:
+        button.config(state="disabled")
 
-        # Memeriksa kemenangan atau seri
-        if check_win():
-            display_board()
-            print(f"Pemain {current_player} menang!")
-            game_running = False
-        elif check_draw():
-            display_board()
-            print("Permainan seri!")
-            game_running = False
-        else:
-            # Mengganti giliran pemain
-            current_player = "O" if current_player == "X" else "X"
+# --- Setup GUI Tkinter ---
 
-# Menjalankan permainan
-if __name__ == "__main__":
-    play_game()
+# Membuat jendela utama aplikasi
+root = tk.Tk()
+root.title("Tic Tac Toe (Python Tkinter)")
+root.resizable(False, False) # Mencegah perubahan ukuran jendela
+
+# Frame untuk menampung grid papan permainan
+board_frame = tk.Frame(root)
+board_frame.pack(pady=10)
+
+# Membuat 9 tombol (3x3 grid)
+for i in range(9):
+    button = tk.Button(
+        board_frame,
+        text=" ",
+        font=("Helvetica", 20, "bold"),
+        height=2,
+        width=5,
+        # Menggunakan lambda untuk meneruskan indeks ke handle_click saat tombol diklik
+        command=lambda index=i: handle_click(index)
+    )
+    # Menempatkan tombol dalam grid (baris i//3, kolom i%3)
+    button.grid(row=i // 3, column=i % 3, padx=5, pady=5)
+    buttons.append(button)
+
+# Label untuk menampilkan status atau giliran pemain
+status_label = tk.Label(root, text=f"Giliran Pemain: {current_player}", font=("Helvetica", 14))
+status_label.pack(pady=10)
+
+# Tombol reset untuk memulai ulang permainan
+reset_button = tk.Button(root, text="Mulai Ulang", command=reset_game)
+reset_button.pack(pady=10)
+
+# Memulai loop utama Tkinter agar jendela tetap terbuka dan interaktif
+root.mainloop()
